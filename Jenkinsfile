@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Clone GitHub') {
             steps {
-                git 'https://github.com/atticusjlith/NodejsChatApp.git'
+                git branch: 'main', url: 'https://github.com/atticusjlith/NodejsChatApp.git'
             }
         }
 
