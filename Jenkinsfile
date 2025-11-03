@@ -2,42 +2,51 @@ pipeline {
     agent any
 
     environment {
-        APP_SERVER = "172.236.110.58"
-        APP_PATH = "/home/nodejs-chatapp"
+        NODE_ENV = 'production'
+        APP_DIR = '/var/jenkins_home/workspace/ChatApp-Pipeline'
     }
 
     stages {
-
-        stage('Checkout SCM') {
+        stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/atticusjlith/NodejsChatApp.git'
+                git url: 'https://github.com/atticusjlith/NodejsChatApp.git', branch: 'main'
             }
         }
 
-        stage('Deploy to App Server') {
+        stage('Install Dependencies') {
             steps {
-                sshagent(['app-server-ssh']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no root@${APP_SERVER} '
-                            mkdir -p ${APP_PATH} &&
-                            cd ${APP_PATH} &&
-                            git pull || git clone https://github.com/atticusjlith/NodejsChatApp.git . &&
-                            npm install &&
-                            pm2 stop nodejs-chatapp || true &&
-                            pm2 start index.js --name nodejs-chatapp
-                        '
-                    """
+                dir("${APP_DIR}") {
+                    sh 'npm install'
                 }
+            }
+        }
+
+        stage('Deploy App') {
+            steps {
+                dir("${APP_DIR}") {
+                    // Stop app if running (using pm2, install if necessary)
+                    sh 'pm2 stop nodejs-chatapp || true'
+                    // Start app
+                    sh 'pm2 start index.js --name nodejs-chatapp'
+                    // Save pm2 process list to auto-start on reboot
+                    sh 'pm2 save'
+                }
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                sh 'pm2 status'
             }
         }
     }
 
     post {
-        success {
-            echo "Deployment succeeded!"
-        }
         failure {
-            echo "Deployment failed. Check logs."
+            echo 'Deployment failed. Check console logs.'
+        }
+        success {
+            echo 'Deployment successful!'
         }
     }
 }
