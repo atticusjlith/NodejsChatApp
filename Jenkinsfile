@@ -2,9 +2,10 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "nodejs-chat-app"
         IMAGE_NAME = "nodejs-chat-app-image"
-        CONTAINER_PORT = "3000"
+        CONTAINER_NAME = "nodejs-chat-app-container"
+        APP_PORT = "3000"
+        HOST_PORT = "8081"
     }
 
     stages {
@@ -25,10 +26,11 @@ pipeline {
         stage('Stop Existing Container') {
             steps {
                 script {
+                    // Stop and remove the container if it exists
                     sh """
-                    if [ \$(docker ps -q -f name=${APP_NAME}) ]; then
-                        docker stop ${APP_NAME}
-                        docker rm ${APP_NAME}
+                    if [ \$(docker ps -aq -f name=${CONTAINER_NAME}) ]; then
+                        docker stop ${CONTAINER_NAME} || true
+                        docker rm ${CONTAINER_NAME} || true
                     fi
                     """
                 }
@@ -38,26 +40,21 @@ pipeline {
         stage('Run Container') {
             steps {
                 script {
-                    sh "docker run -d --name ${APP_NAME} -p ${CONTAINER_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}"
+                    sh "docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${APP_PORT} ${IMAGE_NAME}"
                 }
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                script {
-                    sh "docker ps | grep ${APP_NAME}"
-                }
+                echo "Your app should now be accessible at http://<JENKINS_HOST>:${HOST_PORT}"
             }
         }
     }
 
     post {
-        success {
-            echo "Deployment succeeded!"
-        }
         failure {
-            echo "Deployment failed. Check logs."
+            echo "Deployment failed. Check logs above."
         }
     }
 }
