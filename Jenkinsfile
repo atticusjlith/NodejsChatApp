@@ -2,51 +2,62 @@ pipeline {
     agent any
 
     environment {
-        NODE_ENV = 'production'
-        APP_DIR = '/var/jenkins_home/workspace/ChatApp-Pipeline'
+        APP_NAME = "nodejs-chat-app"
+        IMAGE_NAME = "nodejs-chat-app-image"
+        CONTAINER_PORT = "3000"
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git url: 'https://github.com/atticusjlith/NodejsChatApp.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/atticusjlith/NodejsChatApp.git'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build Docker Image') {
             steps {
-                dir("${APP_DIR}") {
-                    sh 'npm install'
+                script {
+                    sh "docker build -t ${IMAGE_NAME} ."
                 }
             }
         }
 
-        stage('Deploy App') {
+        stage('Stop Existing Container') {
             steps {
-                dir("${APP_DIR}") {
-                    // Stop app if running (using pm2, install if necessary)
-                    sh 'pm2 stop nodejs-chatapp || true'
-                    // Start app
-                    sh 'pm2 start index.js --name nodejs-chatapp'
-                    // Save pm2 process list to auto-start on reboot
-                    sh 'pm2 save'
+                script {
+                    sh """
+                    if [ \$(docker ps -q -f name=${APP_NAME}) ]; then
+                        docker stop ${APP_NAME}
+                        docker rm ${APP_NAME}
+                    fi
+                    """
                 }
             }
         }
 
-        stage('Verify') {
+        stage('Run Container') {
             steps {
-                sh 'pm2 status'
+                script {
+                    sh "docker run -d --name ${APP_NAME} -p ${CONTAINER_PORT}:${CONTAINER_PORT} ${IMAGE_NAME}"
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    sh "docker ps | grep ${APP_NAME}"
+                }
             }
         }
     }
 
     post {
-        failure {
-            echo 'Deployment failed. Check console logs.'
-        }
         success {
-            echo 'Deployment successful!'
+            echo "Deployment succeeded!"
+        }
+        failure {
+            echo "Deployment failed. Check logs."
         }
     }
 }
