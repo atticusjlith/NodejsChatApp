@@ -4,40 +4,40 @@ pipeline {
     environment {
         APP_SERVER = "172.236.110.58"
         APP_PATH = "/home/nodejs-chatapp"
-        SSH_CRED = "app-server-ssh" // your Jenkins SSH credential ID
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Checkout SCM') {
             steps {
-                git url: 'https://github.com/atticusjlith/NodejsChatApp.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/atticusjlith/NodejsChatApp.git'
             }
         }
 
         stage('Deploy to App Server') {
             steps {
-                sshCommand remote: [
-                    user: 'root', 
-                    host: env.APP_SERVER, 
-                    identity: env.SSH_CRED
-                ] , command: """
-                    mkdir -p ${APP_PATH}
-                    cd ${APP_PATH}
-                    git pull || git clone https://github.com/atticusjlith/NodejsChatApp.git .
-                    npm install
-                    pm2 stop nodejs-chatapp || true
-                    pm2 start index.js --name nodejs-chatapp
-                """
+                sshagent(['app-server-ssh']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no root@${APP_SERVER} '
+                            mkdir -p ${APP_PATH} &&
+                            cd ${APP_PATH} &&
+                            git pull || git clone https://github.com/atticusjlith/NodejsChatApp.git . &&
+                            npm install &&
+                            pm2 stop nodejs-chatapp || true &&
+                            pm2 start index.js --name nodejs-chatapp
+                        '
+                    """
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'Deployment successful!'
+            echo "Deployment succeeded!"
         }
         failure {
-            echo 'Deployment failed. Check logs.'
+            echo "Deployment failed. Check logs."
         }
     }
 }
