@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        DOCKERHUB_CREDENTIALS = credentials('cybr-3120')
         IMAGE_NAME = "litattj/nodejs-chatapp"
     }
 
