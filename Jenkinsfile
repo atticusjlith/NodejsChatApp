@@ -1,60 +1,31 @@
 pipeline {
     agent any
-
-    environment {
-        IMAGE_NAME = "nodejs-chat-app-image"
-        CONTAINER_NAME = "nodejs-chat-app-container"
-        APP_PORT = "3000"
-        HOST_PORT = "8081"
-    }
-
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/atticusjlith/NodejsChatApp.git'
             }
         }
-
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${IMAGE_NAME} ."
-                }
+                sh 'docker build -t nodejs-chat-app-image .'
             }
         }
-
         stage('Stop Existing Container') {
             steps {
-                script {
-                    // Stop and remove the container if it exists
-                    sh """
-                    if [ \$(docker ps -aq -f name=${CONTAINER_NAME}) ]; then
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
-                    fi
-                    """
-                }
+                sh 'docker stop nodejs-chat-app || true'
+                sh 'docker rm nodejs-chat-app || true'
             }
         }
-
         stage('Run Container') {
             steps {
-                script {
-                    sh "docker run -d --name ${CONTAINER_NAME} -p ${HOST_PORT}:${APP_PORT} ${IMAGE_NAME}"
-                }
+                sh 'docker run -d -p 3000:3000 --name nodejs-chat-app nodejs-chat-app-image'
             }
         }
-
         stage('Verify Deployment') {
             steps {
-                echo "Your app should now be accessible at http://<JENKINS_HOST>:${HOST_PORT}"
+                sh 'curl -f http://localhost:3000 || echo "App not responding yet"'
             }
-        }
-    }
-
-    post {
-        failure {
-            echo "Deployment failed. Check logs above."
         }
     }
 }
