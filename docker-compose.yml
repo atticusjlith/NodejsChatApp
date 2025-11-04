@@ -1,9 +1,8 @@
-version: "3.9"
-
+version: "3.8"
 services:
   chatapp:
     image: litattj/nodejs-chatapp:latest
-    container_name: chatapp
-    restart: always
+    build: .
     ports:
       - "3000:3000"
+    restart: unless-stopped

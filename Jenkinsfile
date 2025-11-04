@@ -1,30 +1,32 @@
 pipeline {
     agent any
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/atticusjlith/NodejsChatApp.git'
+                git 'https://github.com/atticusjlith/NodejsChatApp.git'
             }
         }
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t nodejs-chat-app-image .'
+                sh 'docker build -t litattj/nodejs-chatapp:latest .'
             }
         }
-        stage('Stop Existing Container') {
+
+        stage('Push to Docker Hub') {
             steps {
-                sh 'docker stop nodejs-chat-app || true'
-                sh 'docker rm nodejs-chat-app || true'
+                sh 'docker push litattj/nodejs-chatapp:latest'
             }
         }
+
         stage('Run Container') {
             steps {
-                sh 'docker run -d -p 3000:3000 --name nodejs-chat-app nodejs-chat-app-image'
-            }
-        }
-        stage('Verify Deployment') {
-            steps {
-                sh 'curl -f http://localhost:3000 || echo "App not responding yet"'
+                sh '''
+                docker rm -f nodejs-chat || true
+                docker pull litattj/nodejs-chatapp:latest
+                docker run -d -p 8081:3000 --name nodejs-chat litattj/nodejs-chatapp:latest
+                '''
             }
         }
     }
